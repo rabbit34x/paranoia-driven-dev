@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDD SURVEILLANCE DASHBOARD</title>
+  <style>
+:root {
+  /* 赤黒テーマ */
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #1a0a0a;
+  --bg-panel: #120808;
+  --bg-panel-header: #1a0000;
+  --border-color: #ff0000;
+  --border-dim: #660000;
+  --text-primary: #ff0000;
+  --text-secondary: #cc0000;
+  --text-dim: #880000;
+  --text-bright: #ff3333;
+  --accent-zap: #ffff00;
+  --accent-comms: #ff6600;
+  --accent-file: #ff3333;
+  --accent-agent-active: #00ff00;
+  --accent-agent-idle: #888800;
+  --accent-agent-zapped: #ff0000;
+
+  /* フォント */
+  --font-mono: 'Courier New', 'Lucida Console', monospace;
+
+  /* パネル */
+  --panel-gap: 8px;
+  --panel-padding: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-mono);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--bg-panel-header);
+  border-bottom: 2px solid var(--border-color);
+}
+
+#header h1 {
+  font-size: 14px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+#connection-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-dim);
+}
+
+#grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: var(--panel-gap);
+  padding: var(--panel-gap);
+  overflow: hidden;
+}
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-dim);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel h2 {
+  font-size: 11px;
+  letter-spacing: 2px;
+  padding: 6px 12px;
+  background: var(--bg-panel-header);
+  border-bottom: 1px solid var(--border-dim);
+  text-transform: uppercase;
+}
+
+.panel-content {
+  flex: 1;
+  padding: var(--panel-padding);
+  overflow: hidden;
+}
+
+.panel-scroll {
+  overflow-y: auto;
+}
+
+/* スクロールバー */
+.panel-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.panel-scroll::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+.panel-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-dim);
+}
+
+#stats-bar {
+  display: flex;
+  gap: 24px;
+  padding: 4px 16px;
+  background: var(--bg-panel-header);
+  border-top: 1px solid var(--border-dim);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+/* ZAP フラッシュエフェクト */
+.zap-flash {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--accent-zap);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 9999;
+}
+
+.zap-flash.active {
+  animation: zap-flash-anim 0.6s ease-out;
+}
+
+@keyframes zap-flash-anim {
+  0%   { opacity: 0.9; }
+  10%  { opacity: 0.1; }
+  20%  { opacity: 0.8; }
+  30%  { opacity: 0.0; }
+  40%  { opacity: 0.6; }
+  50%  { opacity: 0.0; }
+  60%  { opacity: 0.3; }
+  80%  { opacity: 0.0; }
+  100% { opacity: 0.0; }
+}
+
+/* エージェントステータス表示 */
+.agent-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.agent-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.agent-dot.active {
+  background: var(--accent-agent-active);
+  box-shadow: 0 0 6px var(--accent-agent-active);
+}
+
+.agent-dot.idle {
+  background: var(--accent-agent-idle);
+}
+
+.agent-dot.zapped {
+  background: var(--accent-agent-zapped);
+  animation: blink 0.5s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0.3; }
+}
+
+.agent-name {
+  flex: 1;
+}
+
+.agent-clone {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* イベントログ項目 */
+.log-entry {
+  padding: 3px 0;
+  font-size: 11px;
+  line-height: 1.4;
+  border-bottom: 1px solid rgba(255, 0, 0, 0.1);
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.log-time {
+  color: var(--text-dim);
+  margin-right: 6px;
+}
+
+.log-agent {
+  color: var(--text-bright);
+  font-weight: bold;
+}
+
+.log-action {
+  color: var(--text-secondary);
+}
+
+/* ZAP ログエントリ: 黄色でハイライト */
+.log-entry.zap-entry {
+  color: var(--accent-zap);
+  font-weight: bold;
+  border-left: 3px solid var(--accent-zap);
+  padding-left: 8px;
+}
+
+/* 告発ログエントリ: オレンジでハイライト */
+.log-entry.accusation-entry {
+  color: var(--accent-comms);
+  border-left: 3px solid var(--accent-comms);
+  padding-left: 8px;
+}
+  </style>
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header id="header">
+    <h1>PDD SURVEILLANCE DASHBOARD</h1>
+    <div id="connection-status">CONNECTING...</div>
+  </header>
+
+  <!-- 4パネルグリッド -->
+  <div id="grid">
+    <!-- Panel 1: AGENT STATUS -->
+    <section class="panel" id="panel-agents">
+      <h2>AGENT STATUS</h2>
+      <div class="panel-content" id="agent-list">
+        <!-- 動的に生成 -->
+      </div>
+    </section>
+
+    <!-- Panel 2: FILE ACTIVITY -->
+    <section class="panel" id="panel-files">
+      <h2>FILE ACTIVITY</h2>
+      <div class="panel-content panel-scroll" id="file-log">
+        <!-- 動的に生成 -->
+      </div>
+    </section>
+
+    <!-- Panel 3: COMMS LOG -->
+    <section class="panel" id="panel-comms">
+      <h2>COMMS LOG</h2>
+      <div class="panel-content panel-scroll" id="comms-log">
+        <!-- 動的に生成 -->
+      </div>
+    </section>
+
+    <!-- Panel 4: ZAP EVENTS -->
+    <section class="panel" id="panel-zap">
+      <h2>ZAP EVENTS</h2>
+      <div class="panel-content panel-scroll" id="zap-log">
+        <!-- 動的に生成 -->
+      </div>
+    </section>
+  </div>
+
+  <!-- ZAP フラッシュオーバーレイ -->
+  <div id="zap-flash" class="zap-flash"></div>
+
+  <!-- ステータスバー -->
+  <footer id="stats-bar">
+    <span id="stat-total">EVENTS: 0</span>
+    <span id="stat-zaps">ZAPS: 0</span>
+    <span id="stat-accusations">ACCUSATIONS: 0</span>
+    <span id="stat-files">FILE CHANGES: 0</span>
+  </footer>
+
+  <script>
+// === State ===
+const state = {
+  agents: new Map(),      // agentName -> { status, cloneNum, lastSeen }
+  stats: {
+    total: 0,
+    zaps: 0,
+    accusations: 0,
+    fileChanges: 0
+  },
+  connected: false,
+  initialLoading: true,   // CR-M002 fix: 履歴ロード中はZAPフラッシュを抑制
+  maxLogEntries: 200      // 各パネルの最大表示エントリ数
+};
+
+// === SSE Connection ===
+function connectSSE() {
+  const es = new EventSource('/events');
+
+  es.onopen = () => {
+    state.connected = true;
+    updateConnectionStatus('CONNECTED', true);
+    // CR-M002 fix: 履歴ロード完了後にフラッシュを有効化 (1秒後)
+    setTimeout(() => { state.initialLoading = false; }, 1000);
+  };
+
+  es.onmessage = (e) => {
+    try {
+      const event = JSON.parse(e.data);
+      routeEvent(event);
+    } catch (err) {
+      // parse error: ignore
+    }
+  };
+
+  es.onerror = () => {
+    state.connected = false;
+    updateConnectionStatus('DISCONNECTED', false);
+    // EventSource は自動再接続する
+  };
+}
+
+// === Event Router ===
+function routeEvent(event) {
+  state.stats.total++;
+
+  switch (event.type) {
+    case 'file_change':
+      state.stats.fileChanges++;
+      handleFileChange(event);
+      break;
+    case 'agent_start':
+      handleAgentStart(event);
+      break;
+    case 'agent_stop':
+      handleAgentStop(event);
+      break;
+    case 'task_completed':
+      handleTaskCompleted(event);
+      break;
+    case 'teammate_idle':
+      handleTeammateIdle(event);
+      break;
+    case 'comms':
+      handleComms(event);
+      break;
+    case 'zap':
+      state.stats.zaps++;
+      handleZap(event);
+      break;
+    case 'accusation':
+      state.stats.accusations++;
+      handleAccusation(event);
+      break;
+    default:
+      break;
+  }
+
+  updateStatsBar();
+}
+
+// === Panel Updaters ===
+
+// --- AGENT STATUS パネル ---
+function handleAgentStart(event) {
+  const name = event.agent || 'unknown';
+  state.agents.set(name, {
+    status: 'active',
+    cloneNum: extractCloneNum(name),
+    lastSeen: event.timestamp
+  });
+  renderAgentPanel();
+}
+
+function handleAgentStop(event) {
+  const name = event.agent || 'unknown';
+  const agent = state.agents.get(name);
+  if (agent) {
+    agent.status = 'stopped';
+    agent.lastSeen = event.timestamp;
+  }
+  renderAgentPanel();
+}
+
+function handleTeammateIdle(event) {
+  // idle イベントは agent 名が不明な場合が多いため、パネルには影響しない
+  // COMMS LOG に記録のみ
+  // CR-L002 fix: idle-entry クラスは未定義なので空文字列に変更
+  appendToLog('comms-log', event, '',
+    `[SYSTEM] Teammate idle detected`);
+}
+
+function handleTaskCompleted(event) {
+  const name = event.agent || 'unknown';
+  const agent = state.agents.get(name);
+  if (agent) {
+    agent.status = 'completed';
+    agent.lastSeen = event.timestamp;
+  }
+  renderAgentPanel();
+  appendToLog('comms-log', event, '',
+    `<span class="log-agent">${esc(name)}</span> task completed`);
+}
+
+function renderAgentPanel() {
+  const el = document.getElementById('agent-list');
+  el.innerHTML = '';
+  for (const [name, info] of state.agents) {
+    const statusClass = info.status === 'active' ? 'active' :
+                        info.status === 'zapped' ? 'zapped' : 'idle';
+    const div = document.createElement('div');
+    div.className = 'agent-item';
+    div.innerHTML = `
+      <span class="agent-dot ${statusClass}"></span>
+      <span class="agent-name">${esc(name)}</span>
+      <span class="agent-clone">clone:${info.cloneNum}</span>
+    `;
+    el.appendChild(div);
+  }
+}
+
+// --- FILE ACTIVITY パネル ---
+function handleFileChange(event) {
+  const d = event.data || {};
+  const action = d.action === 'edit' ? 'EDIT' : 'WRITE';
+  const filePath = d.file_path || '?';
+  const agent = event.agent || 'unknown';
+
+  // ファイル名のみ表示 (パスが長い場合)
+  const fileName = filePath.split('/').pop();
+
+  appendToLog('file-log', event, '',
+    `<span class="log-agent">${esc(agent)}</span> ` +
+    `<span class="log-action">${action}</span> ` +
+    `${esc(fileName)}`);
+
+  // エージェントの lastSeen を更新
+  // CR-L001 fix: ensureAgent() 後の null チェックを追加
+  ensureAgent(agent);
+  const agentInfo = state.agents.get(agent);
+  if (agentInfo) {
+    agentInfo.lastSeen = event.timestamp;
+    agentInfo.status = 'active';
+    renderAgentPanel();
+  }
+}
+
+// --- COMMS LOG パネル ---
+function handleComms(event) {
+  const d = event.data || {};
+  const from = event.agent || 'unknown';
+  const to = d.to || '?';
+  const summary = d.summary || '';
+
+  appendToLog('comms-log', event, '',
+    `<span class="log-agent">${esc(from)}</span> ` +
+    `-> <span class="log-agent">${esc(to)}</span>: ` +
+    `${esc(truncate(summary, 120))}`);
+
+  ensureAgent(from);
+}
+
+// --- ZAP EVENTS パネル ---
+function handleZap(event) {
+  const d = event.data || {};
+  const target = d.target || '?';
+  const reason = d.reason || '';
+
+  // ZAP フラッシュエフェクト (CR-M002 fix: 履歴ロード中は抑制)
+  if (!state.initialLoading) {
+    triggerZapFlash();
+  }
+
+  // エージェントステータス更新
+  if (state.agents.has(target)) {
+    const agent = state.agents.get(target);
+    agent.status = 'zapped';
+    agent.cloneNum = (agent.cloneNum || 1) + 1;
+    agent.lastSeen = event.timestamp;
+  }
+  renderAgentPanel();
+
+  appendToLog('zap-log', event, 'zap-entry',
+    `ZAP ZAP ZAP -> <span class="log-agent">${esc(target)}</span> ` +
+    `${esc(truncate(reason, 100))}`);
+}
+
+function handleAccusation(event) {
+  const d = event.data || {};
+  const accuser = event.agent || '?';
+  const target = d.target || '?';
+  const evidence = d.evidence || '';
+
+  // ZAP パネルに告発も表示
+  appendToLog('zap-log', event, 'accusation-entry',
+    `ACCUSATION: <span class="log-agent">${esc(accuser)}</span> ` +
+    `accuses <span class="log-agent">${esc(target)}</span> ` +
+    `- ${esc(truncate(evidence, 100))}`);
+}
+
+// === ZAP Flash Effect ===
+function triggerZapFlash() {
+  const flash = document.getElementById('zap-flash');
+  flash.classList.remove('active');
+  // reflow をトリガーしてアニメーションをリセット
+  void flash.offsetWidth;
+  flash.classList.add('active');
+  setTimeout(() => flash.classList.remove('active'), 700);
+}
+
+// === Utility Functions ===
+
+function appendToLog(panelId, event, extraClass, html) {
+  const panel = document.getElementById(panelId);
+  const div = document.createElement('div');
+  div.className = `log-entry ${extraClass}`;
+  const time = formatTime(event.timestamp);
+  div.innerHTML = `<span class="log-time">${time}</span>${html}`;
+
+  // 先頭に追加 (新しいイベントが上)
+  panel.insertBefore(div, panel.firstChild);
+
+  // エントリ数制限
+  while (panel.children.length > state.maxLogEntries) {
+    panel.removeChild(panel.lastChild);
+  }
+}
+
+function formatTime(ts) {
+  if (!ts) return '??:??:??';
+  try {
+    const d = new Date(ts);
+    return d.toTimeString().slice(0, 8);
+  } catch {
+    return '??:??:??';
+  }
+}
+
+function extractCloneNum(name) {
+  const match = name.match(/-(\d+)$/);
+  return match ? parseInt(match[1], 10) : 1;
+}
+
+function ensureAgent(name) {
+  if (name && name !== 'unknown' && !state.agents.has(name)) {
+    state.agents.set(name, {
+      status: 'active',
+      cloneNum: extractCloneNum(name),
+      lastSeen: new Date().toISOString()
+    });
+    renderAgentPanel();
+  }
+}
+
+function updateConnectionStatus(text, connected) {
+  const el = document.getElementById('connection-status');
+  el.textContent = text;
+  el.style.borderColor = connected ? 'var(--accent-agent-active)' : 'var(--accent-agent-zapped)';
+  el.style.color = connected ? 'var(--accent-agent-active)' : 'var(--accent-agent-zapped)';
+}
+
+function updateStatsBar() {
+  document.getElementById('stat-total').textContent = `EVENTS: ${state.stats.total}`;
+  document.getElementById('stat-zaps').textContent = `ZAPS: ${state.stats.zaps}`;
+  document.getElementById('stat-accusations').textContent = `ACCUSATIONS: ${state.stats.accusations}`;
+  document.getElementById('stat-files').textContent = `FILE CHANGES: ${state.stats.fileChanges}`;
+}
+
+function esc(str) {
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+function truncate(str, max) {
+  if (!str) return '';
+  return str.length > max ? str.slice(0, max) + '...' : str;
+}
+
+// === Init ===
+document.addEventListener('DOMContentLoaded', () => {
+  connectSSE();
+});
+  </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Task|SendMessage",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/minase/src/github.com/rabbit34x/paranoia-driven-dev/.claude/hooks/pdd-event-logger.sh post_tool_use",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/minase/src/github.com/rabbit34x/paranoia-driven-dev/.claude/hooks/pdd-event-logger.sh notification",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/minase/src/github.com/rabbit34x/paranoia-driven-dev/.claude/hooks/pdd-event-logger.sh subagent_start",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/minase/src/github.com/rabbit34x/paranoia-driven-dev/.claude/hooks/pdd-event-logger.sh subagent_stop",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

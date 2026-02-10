@@ -1,2 +1,6 @@
 workspace/*
 !workspace/.gitkeep
+
+# Python
+*.pyc
+__pycache__/

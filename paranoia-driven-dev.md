@@ -327,6 +327,22 @@ UV の準備手順:
 これにより、5人のトラブルシューターが同時にファイルを編集するたびに
 ブラウザの表示がリアルタイムで変化する。カオスが可視化される。
 
+### イベントログ記録
+
+PDD ミッション中の全イベントは `.claude/hooks/pdd-event-logger.sh` により
+`workspace/.pdd-events.jsonl` に自動記録される。
+
+記録されるイベント:
+- ファイルの作成・変更 (file_change)
+- エージェントの起動・停止 (agent_start, agent_stop)
+- タスクの完了 (task_completed)
+- エージェント間通信 (comms)
+- 告発 (accusation)
+- ZAP の執行 (zap)
+- チームメイトのアイドル検出 (teammate_idle)
+
+このログはダッシュボード (`dashboard/server.py`) で可視化できる。
+
 ### フェーズ2: ミッション遂行
 
 各トラブルシューターが**不完全な情報を元に**タスクを実行する。

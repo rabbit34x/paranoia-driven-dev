@@ -25,3 +25,28 @@
 - ZAP は積極的に行え
 
 幸福は義務です。
+
+## ダッシュボード
+
+PDD ミッション中のイベントをリアルタイムで監視するダッシュボードが利用できる。
+
+### 起動方法
+
+```bash
+cd /home/minase/src/github.com/rabbit34x/paranoia-driven-dev
+python3 dashboard/server.py
+```
+
+ブラウザで http://localhost:8765 を開く。
+
+### 仕組み
+
+1. Claude Code hooks がイベントを `workspace/.pdd-events.jsonl` に記録
+2. SSE サーバーが JSONL を監視し、ブラウザにリアルタイム配信
+3. ダッシュボードが4パネルでイベントを可視化
+
+### イベントログのリセット
+
+```bash
+rm workspace/.pdd-events.jsonl
+```
